@@ -1,4 +1,4 @@
-# 修改fis3的/lib/compile.js v1.1.1
+# 修改fis3的/lib/compile.js v1.1.2
 
 功能说明及使用：
 --------------
@@ -13,35 +13,44 @@
 3. 对data-main进行资源定位
 
         * Line 435 前 插入：
-        $1 = $1.replace(/(\s(?:data-)?main\s*=\s*)('[^']+'|"[^"]+"|[^\s\/>]+)/ig, function(m, prefix, value) {
-            if (value == "\"/widget/main.js\"")
-                value = "\"/widget/aio.js\""
-            if (isInline(fis.util.query(value))) {
-                embed += map.embed.wrap(value);
-                return '';
-            } else {
-                return prefix + map.uri.wrap(value);
-            }
-        });
+            $1 = $1.replace(/(\s(?:data-)?main\s*=\s*)('[^']+'|"[^"]+"|[^\s\/>]+)/ig, function(m, prefix, value) {
+                if (value == "\"/widget/main.js\"")
+                    value = "\"/widget/aio.js\""
+                if (isInline(fis.util.query(value))) {
+                    embed += map.embed.wrap(value);
+                    return '';
+                } else {
+                    return prefix + map.uri.wrap(value);
+                }
+            });
 
 4. 对 qll-img 和 qll-bg 进行资源定位
 
         * 修改 Line 423：
-        source: var reg = /(<script(?:(?=\s)[\s\S]*?["'\s\w\/\-]>|>))([\s\S]*?)(?=<\/script\s*>|$)|........... 
-        在 "var reg = /" 后增加 ((qll-img|qll-bg)=\s?"[\s\S]*?")|
+            source: var reg = /(<script(?:(?=\s)[\s\S]*?["'\s\w\/\-]>|>))([\s\S]*?)(?=<\/script\s*>|$)|........... 
+            在 "var reg = /" 后增加 ((qll-img|qll-bg)=\s?"[\s\S]*?")|
 
-        * Line504 前 插入：
-        m = m.replace(/(qll-img=\s*)('[^']+'|"[^"]+"|[^\s\/>]+)/ig, function(_, prefix, value) {
-            // console.log(prefix, value);
-            return prefix + map.uri.wrap(value);
-        });
-        m = m.replace(/(qll-bg=\s?".*url\()('[^']+'|"[^"]+"|[^\s\/>]+)(.*")/ig, function(_, prefix, value, overfix) {
-            // console.log(prefix, value, overfix);
-            return prefix + map.uri.wrap(value) + overfix;
-        });
+        * 修改 Line 424：
+            source: callback = callback || function(m, ...........
+            在 "callback = callback || function(m, " 后增加： $qll_img, $qll_bg, 
+
+        * Line 504 前 插入：
+            m = m.replace(/(qll-img=\s*)('[^']+'|"[^"]+"|[^\s\/>]+)/ig, function(_, prefix, value) {
+                // console.log(prefix, value);
+                return prefix + map.uri.wrap(value);
+            });
+            m = m.replace(/(qll-bg=\s?".*url\()('[^']+'|"[^"]+"|[^\s\/>]+)(.*")/ig, function(_, prefix, value, overfix) {
+                // console.log(prefix, value, overfix);
+                return prefix + map.uri.wrap(value) + overfix;
+            });
 
 更新记录：
 --------------
+
+v1.1.2
+
+        1. 增加了Line 424行的修改，详见使用说明.4
+        2. 修改compile文件名，注明是基于3.4.33的示例，不同版本的fis不建议直接覆盖文件。
 
 v1.1.1
 
