@@ -32,7 +32,9 @@
     ```
     > 支持多个aio.js
     > > 比如widget/app下有mp和my两个文件夹，里面分别有一个main入口。
+    > 
     > > 在视图中，data-main分别引用/widget/app/mp/main.js和/widget/app/my/main.js
+    > 
     > > r.js中，需要把mp和my中的js分别打包为/widget/aio_app_mp.js和/widget/aio_app_my.js
 
 
