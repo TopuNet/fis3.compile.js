@@ -39,12 +39,16 @@
 4. 对 qll-img 和 qll-bg 进行资源定位
 
     * 修改 Line 423：
+    ```
         source: var reg = /(<script(?:(?=\s)[\s\S]*?["'\s\w\/\-]>|>))([\s\S]*?)(?=<\/script\s*>|$)|........... 
         在 "var reg = /" 后增加 ((qll-img|qll-bg)=\s?"[\s\S]*?")|
+    ```
 
     * 修改 Line 424：
+    ```
         source: callback = callback || function(m, ...........
         在 "callback = callback || function(m, " 后增加： $qll_img, $qll_bg, 
+    ```
 
     * Line 504 前 插入：
     ```javascript
