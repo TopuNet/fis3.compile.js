@@ -12,33 +12,7 @@
 2. 通过 fis3 -v 查看fis3的安装目录。找到 /fis3安装目录/lib/compile.js 进行编辑
 
 
-3. 对data-main进行资源定位
-
-    * Line 435 前 插入：
-    ```javascript
-        $1 = $1.replace(/(\sdata-main\s*=\s*)('[^']+'|"[^"]+"|[^\s\/>]+)/ig, function(m, prefix, value) {
-            var reg = new RegExp(/['"]\/widget\/(?:(.+)\/)?main\.js['"]/ig);
-            var result = reg.exec(value);
-
-            if (result && result[1])
-              value = "\"/widget/aio_" + result[1].replace("/", "_") + ".js\"";
-            if (isInline(fis.util.query(value))) {
-              embed += map.embed.wrap(value);
-              return '';
-            } else {
-              return prefix + map.uri.wrap(value);
-            }
-        });
-    ```
-    > 支持多个aio.js
-    > > 比如widget/app下有mp和my两个文件夹，里面分别有一个main入口。
-    > 
-    > > 在视图中，data-main分别引用/widget/app/mp/main.js和/widget/app/my/main.js
-    > 
-    > > r.js中，需要把mp和my中的js分别打包为/widget/aio_app_mp.js和/widget/aio_app_my.js
-
-
-4. 对 qll-img 和 qll-bg 进行资源定位
+3. 对 qll-img 和 qll-bg 进行资源定位
 
     * 修改 Line 423：
     ```
@@ -64,8 +38,40 @@
         });
     ```
 
+
+4. 对data-main进行资源定位
+
+    * Line 435 前 插入：
+    ```javascript
+        $1 = $1.replace(/(\sdata-main\s*=\s*)('[^']+'|"[^"]+"|[^\s\/>]+)/ig, function(m, prefix, value) {
+            var reg = new RegExp(/['"]\/widget\/(?:(.+)\/)?main\.js['"]/ig);
+            var result = reg.exec(value);
+
+            if (result) {
+              var dir = result[1] ? "_" + result[1].replace("/", "_") : "";
+              value = "\"/widget/aio" + dir + ".js\"";
+            }
+            if (isInline(fis.util.query(value))) {
+              embed += map.embed.wrap(value);
+              return '';
+            } else {
+              return prefix + map.uri.wrap(value);
+            }
+        });
+    ```
+    > 支持多个aio.js
+    > > 比如widget/app下有mp和my两个文件夹，里面分别有一个main入口。
+    > 
+    > > 在视图中，data-main分别引用/widget/app/mp/main.js和/widget/app/my/main.js
+    > 
+    > > r.js中，需要把mp和my中的js分别打包为/widget/aio_app_mp.js和/widget/aio_app_my.js
+
 更新记录：
 --------------
+
+v1.2.2
+
+        1. 修改data-main的bug
 
 v1.2.1
 

@@ -436,8 +436,10 @@ function extHtml(content, callback, file) {
         var reg = new RegExp(/['"]\/widget\/(?:(.+)\/)?main\.js['"]/ig);
         var result = reg.exec(value);
 
-        if (result && result[1])
-          value = "\"/widget/aio_" + result[1].replace("/", "_") + ".js\"";
+        if (result) {
+          var dir = result[1] ? "_" + result[1].replace("/", "_") : "";
+          value = "\"/widget/aio" + dir + ".js\"";
+        }
         if (isInline(fis.util.query(value))) {
           embed += map.embed.wrap(value);
           return '';
