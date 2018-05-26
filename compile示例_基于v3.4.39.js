@@ -420,145 +420,120 @@ function extCss(content, callback, file) {
  * @memberOf fis.compile
  */
 function extHtml(content, callback, file) {
-    /** 
-        对 qll-img 和 qll-bg 进行资源定位
-        Line 423
-        source: var reg = /(<script(?:(?=\s)[\s\S]*?["'\s\w\/\-]>|>))([\s\S]*?)(?=<\/script\s*>|$)|........... 
-        在 "var reg = /" 后增加： ((qll-img|qll-bg)=\s?"[\s\S]*?")|
-    **/
-    var reg = /((qll-img|qll-bg)=\s?"[\s\S]*?")|(<script(?:(?=\s)[\s\S]*?["'\s\w\/\-]>|>))([\s\S]*?)(?=<\/script\s*>|$)|(<style(?:(?=\s)[\s\S]*?["'\s\w\/\-]>|>))([\s\S]*?)(?=<\/style\s*>|$)|<(img|embed|audio|video|link|object|source)\s+[\s\S]*?["'\s\w\/\-](?:>|$)|<!--inline\[([^\]]+)\]-->|(<!(?:--)?\[[^>]+>)|<!--(?!\[|>)([\s\S]*?)(-->|$)|\bstyle\s*=\s*("(?:[^\\"\r\n\f]|\\[\s\S])+"|'(?:[^\\'\n\r\f]|\\[\s\S])+')/ig;
-
-    /**
-        对 qll-img 和 qll-bg 进行资源定位
-        Line 424
-        source: callback = callback || function(m, ...........
-        在 "callback = callback || function(m, " 后增加： $qll_img, $qll_bg, 
-    **/
-    callback = callback || function(m, $qll_img, $qll_bg, $1, $2, $3, $4, $5, $6, $7, $8, $9, $10) {
-        if ($1) { //<script>
-            var embed = '';
-            $1 = $1.replace(/(\s(?:data-)?src\s*=\s*)('[^']+'|"[^"]+"|[^\s\/>]+)/ig, function(m, prefix, value) {
-                if (isInline(fis.util.query(value))) {
-                    embed += map.embed.wrap(value);
-                    return '';
-                } else {
-                    return prefix + map.uri.wrap(value);
-                }
-            });
-
-            /** 
-                对 data-main 进行资源定位
-                Line 435 前 插入：
-            **/
-            $1 = $1.replace(/(\s(?:data-)?main\s*=\s*)('[^']+'|"[^"]+"|[^\s\/>]+)/ig, function(m, prefix, value) {
-                if (value == "\"/widget/main.js\"")
-                    value = "\"/widget/aio.js\""
-                if (isInline(fis.util.query(value))) {
-                    embed += map.embed.wrap(value);
-                    return '';
-                } else {
-                    return prefix + map.uri.wrap(value);
-                }
-            });
-            /** 插入结束 **/
-
-            if (embed) {
-                //embed file
-                m = $1 + embed;
-            } else {
-                m = xLang($1, $2, file, rType.test($1) ? (RegExp.$3 === 'javascript' ? 'js' : 'html') : 'js');
-            }
-        } else if ($3) { //<style>
-            m = xLang($3, $4, file, 'css');
-        } else if ($5) { //<img|embed|audio|video|link|object|source>
-            var tag = $5.toLowerCase();
-            if (tag === 'link') {
-                var inline = '',
-                    isCssLink = false,
-                    isImportLink = false;
-                var result = m.match(/\srel\s*=\s*('[^']+'|"[^"]+"|[^\s\/>]+)/i);
-                if (result && result[1]) {
-                    var rel = result[1].replace(/^['"]|['"]$/g, '').toLowerCase();
-                    isCssLink = rel === 'stylesheet';
-                    isImportLink = rel === 'import';
-                }
-                m = m.replace(/(\s(?:data-)?href\s*=\s*)('[^']+'|"[^"]+"|[^\s\/>]+)/ig, function(_, prefix, value) {
-                    if ((isCssLink || isImportLink) && isInline(fis.util.query(value))) {
-                        if (isCssLink) {
-                            inline += '<style' + m.substring(5).replace(/\/(?=>$)/, '').replace(/\s+(?:charset|href|data-href|hreflang|rel|rev|sizes|target)\s*=\s*(?:'[^']+'|"[^"]+"|[^\s\/>]+)/ig, '');
-                        }
-
-                        inline += map.embed.wrap(value, m.replace(/^<link\b|\/?>$|\b(?:rel|href)='[^']*'|\b(?:rel|href)="[^"]*"/g, '').trim());
-                        if (isCssLink) {
-                            inline += '</style>';
-                        }
-                        return '';
-                    } else {
-                        return prefix + map.uri.wrap(value);
-                    }
-                });
-                m = inline || m;
-            } else if (tag === 'object') {
-                m = m.replace(/(\sdata\s*=\s*)('[^']+'|"[^"]+"|[^\s\/>]+)/ig, function(m, prefix, value) {
-                    return prefix + map.uri.wrap(value);
-                });
-            } else {
-                m = m.replace(/(\s(?:(?:data-)?src(?:set)?|poster)\s*=\s*)('[^']+'|"[^"]+"|[^\s\/>]+)/ig, function(m, prefix, value) {
-                    var key = isInline(fis.util.query(value)) ? 'embed' : 'uri';
-                    if (prefix.indexOf('srcset') != -1) {
-                        //support srcset
-                        var info = fis.util.stringQuote(value);
-                        var srcset = [];
-                        info.rest.split(',').forEach(function(item) {
-                            var p;
-                            item = item.trim();
-                            if ((p = item.indexOf(' ')) == -1) {
-                                srcset.push(item);
-                                return;
-                            }
-                            srcset.push(map['uri'].wrap(item.substr(0, p)) + item.substr(p));
-                        });
-                        return prefix + info.quote + srcset.join(', ') + info.quote;
-                    }
-                    return prefix + map[key].wrap(value);
-                });
-            }
-        } else if ($6) {
-            m = map.embed.wrap($6);
-        } else if ($8) {
-            m = '<!--' + analyseComment($8) + $9;
-        } else if ($10) {
-            var quote = $10[0];
-            m = 'style=' + quote + map.inlineStyle.wrap($10.substring(1, $10.length - 1)) + quote;
+  var reg = /((qll-img|qll-bg)=\s?"[\s\S]*?")|(<script(?:(?=\s)[\s\S]*?["'\s\w\/\-]>|>))([\s\S]*?)(?=<\/script\s*>|$)|(<style(?:(?=\s)[\s\S]*?["'\s\w\/\-]>|>))([\s\S]*?)(?=<\/style\s*>|$)|<(img|embed|audio|video|link|object|source)\s+[\s\S]*?["'\s\w\/\-](?:>|$)|<!--inline\[([^\]]+)\]-->|(<!(?:--)?\[[^>]+>)|<!--(?!\[|>)([\s\S]*?)(-->|$)|\bstyle\s*=\s*("(?:[^\\"\r\n\f]|\\[\s\S])+"|'(?:[^\\'\n\r\f]|\\[\s\S])+')/ig;
+  callback = callback || function(m, $qll_img, $qll_bg, $1, $2, $3, $4, $5, $6, $7, $8, $9, $10) {
+    if ($1) { //<script>
+      var embed = '';
+      $1 = $1.replace(/(\s(?:data-)?src\s*=\s*)('[^']+'|"[^"]+"|[^\s\/>]+)/ig, function(m, prefix, value) {
+        if (isInline(fis.util.query(value))) {
+          embed += map.embed.wrap(value);
+          return '';
+        } else {
+          return prefix + map.uri.wrap(value);
         }
+      });
+      $1 = $1.replace(/(\sdata-main\s*=\s*)('[^']+'|"[^"]+"|[^\s\/>]+)/ig, function(m, prefix, value) {
+        var reg = new RegExp(/['"]\/widget\/(?:(.+)\/)?main\.js['"]/ig);
+        var result = reg.exec(value);
 
-        /** 
-            对 qll-img 和 qll-bg 进行资源定位
-            Line504 前 插入：
-        **/
-        // qll-img | qll-bg
-        m = m.replace(/(qll-img=\s*)('[^']+'|"[^"]+"|[^\s\/>]+)/ig, function(_, prefix, value) {
-            // console.log(prefix, value);
+        if (result && result[1])
+          value = "\"/widget/aio_" + result[1].replace("/", "_") + ".js\"";
+        if (isInline(fis.util.query(value))) {
+          embed += map.embed.wrap(value);
+          return '';
+        } else {
+          return prefix + map.uri.wrap(value);
+        }
+      });
+      if (embed) {
+        //embed file
+        m = $1 + embed;
+      } else {
+        m = xLang($1, $2, file, rType.test($1) ? (RegExp.$3 === 'javascript' ? 'js' : 'html') : 'js');
+      }
+    } else if ($3) { //<style>
+      m = xLang($3, $4, file, 'css');
+    } else if ($5) { //<img|embed|audio|video|link|object|source>
+      var tag = $5.toLowerCase();
+      if (tag === 'link') {
+        var inline = '',
+          isCssLink = false,
+          isImportLink = false;
+        var result = m.match(/\srel\s*=\s*('[^']+'|"[^"]+"|[^\s\/>]+)/i);
+        if (result && result[1]) {
+          var rel = result[1].replace(/^['"]|['"]$/g, '').toLowerCase();
+          isCssLink = rel === 'stylesheet';
+          isImportLink = rel === 'import';
+        }
+        m = m.replace(/(\s(?:data-)?href\s*=\s*)('[^']+'|"[^"]+"|[^\s\/>]+)/ig, function(_, prefix, value) {
+          if ((isCssLink || isImportLink) && isInline(fis.util.query(value))) {
+            if (isCssLink) {
+              inline += '<style' + m.substring(5).replace(/\/(?=>$)/, '').replace(/\s+(?:charset|href|data-href|hreflang|rel|rev|sizes|target)\s*=\s*(?:'[^']+'|"[^"]+"|[^\s\/>]+)/ig, '');
+            }
+
+            inline += map.embed.wrap(value, m.replace(/^<link\b|\/?>$|\b(?:rel|href)='[^']*'|\b(?:rel|href)="[^"]*"/g, '').trim());
+            if (isCssLink) {
+              inline += '</style>';
+            }
+            return '';
+          } else {
             return prefix + map.uri.wrap(value);
+          }
         });
-        m = m.replace(/(qll-bg=\s?".*url\()('[^']+'|"[^"]+"|[^\s\/>]+)(.*")/ig, function(_, prefix, value, overfix) {
-            // console.log(prefix, value, overfix);
-            return prefix + map.uri.wrap(value) + overfix;
+        m = inline || m;
+      } else if (tag === 'object') {
+        m = m.replace(/(\sdata\s*=\s*)('[^']+'|"[^"]+"|[^\s\/>]+)/ig, function(m, prefix, value) {
+          return prefix + map.uri.wrap(value);
         });
-        /** 插入结束 **/
+      } else {
+        m = m.replace(/(\s(?:(?:data-)?src(?:set)?|poster)\s*=\s*)('[^']+'|"[^"]+"|[^\s\/>]+)/ig, function(m, prefix, value) {
+          var key = isInline(fis.util.query(value)) ? 'embed' : 'uri';
+          if (prefix.indexOf('srcset') != -1) {
+            //support srcset
+            var info = fis.util.stringQuote(value);
+            var srcset = [];
+            info.rest.split(',').forEach(function(item) {
+              var p;
+              item = item.trim();
+              if ((p = item.indexOf(' ')) == -1) {
+                srcset.push(item);
+                return;
+              }
+              srcset.push(map['uri'].wrap(item.substr(0, p)) + item.substr(p));
+            });
+            return prefix + info.quote + srcset.join(', ') + info.quote;
+          }
+          return prefix + map[key].wrap(value);
+        });
+      }
+    } else if ($6) {
+      m = map.embed.wrap($6);
+    } else if ($8) {
+      m = '<!--' + analyseComment($8) + $9;
+    } else if ($10) {
+      var quote = $10[0];
+      m = 'style=' + quote + map.inlineStyle.wrap($10.substring(1, $10.length - 1)) + quote;
+    }
+    m = m.replace(/(qll-img=\s*)('[^']+'|"[^"]+"|[^\s\/>]+)/ig, function(_, prefix, value) {
+      // console.log(prefix, value);
+      return prefix + map.uri.wrap(value);
+    });
+    m = m.replace(/(qll-bg=\s?".*url\()('[^']+'|"[^"]+"|[^\s\/>]+)(.*")/ig, function(_, prefix, value, overfix) {
+      // console.log(prefix, value, overfix);
+      return prefix + map.uri.wrap(value) + overfix;
+    });
+    return m;
+  };
+  content = content.replace(reg, callback);
 
-        return m;
-    };
-    content = content.replace(reg, callback);
+  var info = {
+    file: file,
+    content: content
+  };
 
-    var info = {
-        file: file,
-        content: content
-    };
+  fis.emit('standard:html', info);
 
-    fis.emit('standard:html', info);
-
-    return info.content;
+  return info.content;
 }
 
 /**
@@ -851,7 +826,8 @@ function addMissingDeps(file, value) {
       value = value.substring(1, value.length - 1);
     }
 
-    var filepath = _.isAbsolute(value) ? value : path.join(file.dirname, value), value;
+    var filepath = _.isAbsolute(value) ? value : path.join(file.dirname, value),
+      value;
 
     file.cache.addMissingDeps(filepath, value);
   }
